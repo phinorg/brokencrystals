@@ -60,7 +60,7 @@ jobs:
       ENDOR_WORKFLOW: endor-sast.yml
       ENDOR_SARIF_ARTIFACT: endor-sast-sarif
       ENDOR_SARIF_FILE: endor-sast.sarif
-      ENDOR_NAMESPACE: ${{ vars.ENDOR_NAMESPACE || 'ram-learn' }}
+      ENDOR_NAMESPACE: ${{ vars.ENDOR_NAMESPACE }}
       ENDOR_API: ${{ vars.ENDOR_API || 'https://api.endorlabs.com' }}
       ENDOR_LANGUAGES: javascript,typescript
     steps:
