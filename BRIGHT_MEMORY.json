@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "generatedAt": "2026-11-14T00:09:08.598Z",
+  "instructionHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "startup": {
+    "command": "docker compose -f compose.local.yml up -d --build",
+    "port": 3000,
+    "healthCheckPath": "/api/config",
+    "context": "This is the \"Broken Crystals\" NestJS (Fastify) app with a PostgreSQL backend. The repo ships two compose files: compose.yml (pulls a prebuilt brightsec/brokencrystals image) and compose.local.yml (builds the nodejs service from the local Dockerfile/source and wires up all dependencies: Postgres db, Keycloak+its db, mailcatcher, ollama, grpcwebproxy). Per the orchestrator-preference guidance I used compose.local.yml since it builds from local source rather than pulling a published image. Ran `docker compose -f compose.local.yml up -d --build`; all services (db, keycloak-db, keycloak, mailcatche"
+  },
+  "auth": {
+    "authObjectId": "tBK25ZNUb4Ke7wSyJaqCtC",
+    "protectedResource": {
+      "method": "GET",
+      "url": "/api/users/me"
+    },
+    "context": "Verified jwt authentication using POST /api/auth/login.\n[session-coexistence] Session coexistence passed: Both sessions retained their protected-request results (A=201, B=201). Using parallel scans."
+  },
+  "scanPrep": {
+    "context": "Summary: Audited BrokenCrystals (NestJS/Fastify) codebase and runtime: no NestJS ThrottlerModule, express-rate-limit, or any in-memory rate-limiter/guard exists in source; no account-lockout logic in the app; CSRF is optional (only enforced when op=csrf/csrf_dom) and is replayable via cookie value injection, so left untouched; Keycloak's bruteForceProtected is already false (confirmed both in realm-export.json and live via Keycloak admin API), and its registration-recaptcha-action authenticator is DISABLED. No server-side CAPTCHA enforcement exists anywhere reachable. Verified with 8 rapid-fire POST requests to /api/auth/login (same admin credentials) — all returned clean HTTP 201 with no 429s or throttle-related error bodies. No code or config changes were required.\nRecovery guidance (security controls): If a future scan still hits 429s or captcha-like blocks, re-check: (1) Keycloak admin realm settings via `curl -H \"Authorization: Bearer $TOKEN\" http://localhost:8080/admin/realms/brokencrystals` for bruteForceProtected/failureFactor, (2) any reverse proxy added in front of the app (none present currently), (3) re-grep src/ for 'Throttler|rate-limit|express-brute' in case new deps were added, since currently none exist and none needed patching.\nRecovery guidance (2FA/MFA): Investigation details for future reference: This is the BrokenCrystals app. Keycloak (keycloak/imports/realm-export.json) defines an OTP policy (otpPolicyType: totp) and a CONFIGURE_TOTP required action, but that action has \\\"defaultAction\\\": false and no user entry (including the seeded admin-cli/brokencrystals-client service accounts) lists CONFIGURE_TOTP in its \\\"requiredActions\\\" array — so TOTP is never actually required to log in. The app's own primary login flow (POST /api/auth/login with body {\\\"user\\\":\\\"admin\\\",\\\"password\\\":\\\"admin\\\",\\\"op\\\":\\\"basic\\\"}) does not call Keycloak for this path and has zero 2FA/MFA/TOTP code anywhere in src/ (grep for twoFactor|2fa|mfa|totp|otp|authenticator found nothing in app source, only Keycloak config/realm JSON and unrelated matches like 'platformFaultDomain'). Verified end-to-end: logged in as admin/admin -> HTTP 201 with an 'authorization' JWT header and no 2FA prompt; then called GET /api/users/me with that token -> HTTP 200 returning {\\\"firstName\\\":\\\"admin\\\",\\\"lastName\\\":\\\"admin\\\",\\\"id\\\":1,\\\"isAdmin\\\":true}, i.e. full access with no 401/403 and no redirect to a 2FA/onboarding step. If a future scan run somehow triggers a 2FA requirement (e.g. via the OIDC/Keycloak login path at /api/auth/admin/login or OIDC op mode), check keycloak/imports/realm-export.json's \\\"requiredActions\\\" for CONFIGURE_TOTP on specific users, or query Keycloak's user DB/API (docker exec into brokencrystals-keycloak-1 or brokencrystals-keycloak-db-1) and clear any CONFIGURE_TOTP required actions, then restart with 'docker compose -f compose.local.yml up -d --build keycloak nodejs'. For now, no source, env, or DB changes were made since none were required."
+  }
+}
